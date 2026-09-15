@@ -13,15 +13,41 @@
     }catch(_){}
     return originalFetch(input,init);
   };
+
   ['kq.cloudToken','kq.cloudSessionV2','kq.cloudSnapshotV2','kq.teacherToken','kq.schoolTeacherCode','kq.classCode','kq.studentNo','kq.studentProfile'].forEach(key=>localStorage.removeItem(key));
+
   const style=document.createElement('style');
   style.id='localOnlyPublicStyle';
-  style.textContent='#teacherEntry,#easyTeacherEntry,.studentIdentityCard,#teacherModal,#schoolCloudState{display:none!important}';
+  style.textContent=`
+    #teacherEntry,#easyTeacherEntry,.studentIdentityCard,#teacherModal,#schoolCloudState,
+    #studentSetupBtn,[data-student-setup],[data-school-setup],
+    input[placeholder*="3-1"],input[placeholder*="12"]{display:none!important}
+  `;
   (document.head||document.documentElement).appendChild(style);
-  function simplifyHome(){
-    document.querySelector('.studentIdentityCard')?.remove();
-    document.querySelector('#studentSetupBtn')?.remove();
+
+  function removeSchoolUi(){
+    document.querySelectorAll('.studentIdentityCard,#studentSetupBtn,#teacherEntry,#easyTeacherEntry,#teacherModal,#schoolCloudState').forEach(el=>el.remove());
+
+    document.querySelectorAll('input').forEach(input=>{
+      const p=(input.getAttribute('placeholder')||'').trim();
+      if(p.includes('3-1')||p==='例 12'){
+        let box=input.parentElement;
+        while(box&&box!==document.body){
+          const t=(box.textContent||'').replace(/\s+/g,'');
+          if((t.includes('クラス')&&t.includes('出席番号'))||t.includes('学校用')){box.remove();break;}
+          box=box.parentElement;
+        }
+      }
+    });
+
+    document.querySelectorAll('button').forEach(btn=>{
+      const t=(btn.textContent||'').replace(/\s+/g,'');
+      if(t.includes('クラス・出席番号を変更')) btn.remove();
+    });
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',simplifyHome,{once:true});
-  else simplifyHome();
+
+  removeSchoolUi();
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',removeSchoolUi,{once:true});
+  else setTimeout(removeSchoolUi,0);
+  window.addEventListener('load',()=>{removeSchoolUi();setTimeout(removeSchoolUi,500);},{once:true});
 })();
