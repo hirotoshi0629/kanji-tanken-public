@@ -1,0 +1,42 @@
+name: Public release audit
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify required files
+        run: |
+          test -s index.html
+          test $(wc -c < app.js) -gt 2500000
+          test -s styles.css
+          test -s teacher-easy.js
+          test -s service-worker.js
+      - name: Verify local-only safety layer
+        run: |
+          grep -q "arbcsdlypbtwiyrupaod.supabase.co" teacher-easy.js
+          grep -q "blockedLocalPaths" teacher-easy.js
+          grep -q "studentIdentityCard" teacher-easy.js
+          grep -q "クラス・出席番号を変更" teacher-easy.js
+          ! grep -q "MutationObserver" teacher-easy.js
+      - name: Verify page wiring
+        run: |
+          grep -q 'app.js?v=complete-release' index.html
+          grep -q 'teacher-easy.js?v=1' index.html
+          grep -q 'manifest.webmanifest' index.html
+      - name: Audit network-capable code
+        run: |
+          echo '--- fetch calls ---'
+          grep -nE 'fetch\(' app.js teacher-easy.js || true
+          echo '--- external URLs ---'
+          grep -nE 'https?://' index.html app.js teacher-easy.js service-worker.js | head -100 || true
+          echo '--- paid AI / secret patterns ---'
+          if grep -niE 'api\.openai\.com|generativelanguage\.googleapis\.com|api\.anthropic\.com|sk-[A-Za-z0-9_-]{16,}|service_role' index.html app.js teacher-easy.js service-worker.js; then
+            echo 'Potential paid AI endpoint or secret found'; exit 1;
+          fi
+          echo 'No known paid-AI endpoint or high-risk secret pattern found.'
