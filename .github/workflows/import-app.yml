@@ -1,0 +1,47 @@
+name: Import current Kanji Tanken app
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/import-app.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import current public deployment assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://kanji-tanken-prod.vercel.app'
+          curl --fail --location --retry 3 "$base/" -o index.html
+          curl --fail --location --retry 3 "$base/app.js?v=complete-release" -o app.js
+          curl --fail --location --retry 3 "$base/styles.css?v=4.6" -o styles.css
+          test -s index.html
+          test -s app.js
+          test -s styles.css
+          grep -q 'かん字たんけん' index.html
+          test "$(wc -c < app.js)" -gt 1000000
+      - name: Keep local-only safety files
+        shell: bash
+        run: |
+          test -s teacher-easy.js
+          test -s service-worker.js
+          touch .nojekyll
+      - name: Commit imported assets
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html app.js styles.css .nojekyll
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+          else
+            git commit -m 'Import current Kanji Tanken app assets'
+            git push
+          fi
