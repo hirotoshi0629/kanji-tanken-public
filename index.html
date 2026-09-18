@@ -32,7 +32,7 @@
 })();
 </script>
 <main class="shell">
-  <section id="homeView"><div class="studentIdentityCard"><div><b>🏫 学習記録</b><br><span id="studentCodeStatus">児童コード：未登録</span></div><button id="studentSetupBtn" type="button" class="secondary">児童コードを登録・変更</button></div>
+  <section id="homeView">
     <div class="topbar">
       <div class="brand">🐾 かん字たんけん！</div><div class="spacer"></div>
       <div id="aiConnPill" class="pill">無料・端末内判定</div><button id="animalRoomBtn" class="roomTopBtn">🐾 どうぶつのおへや</button><div class="pill"><span id="points">0</span> PT</div>
@@ -161,7 +161,7 @@
       </div>
     </div>
   </section>
-<div class="buildTag">v3.8.1 TEACHER SANDBOX</div>
+<div class="buildTag">漢字たんけん 公開版</div>
 </main>
 
 <div id="unlockModal" class="modal hidden"><div class="card unlockCard"><div class="unlockTitle">🎉 あたらしい仲間！</div><div id="unlockBody" class="unlockBody"></div><p>漢字をがんばったから、新しいどうぶつと出会えたよ！</p><button id="unlockCloseBtn" class="primary" onclick="document.querySelector('#unlockModal').classList.add('hidden')">やった！</button></div></div>
@@ -169,7 +169,7 @@
 <script src="https://cdn.jsdelivr.net/gh/asdfjkl/kanjicanvas@master/docs/resources/javascript/kanji-canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/asdfjkl/kanjicanvas@master/docs/resources/javascript/ref-patterns.js"></script>
 <script src="./app.js?v=complete-release" type="module"></script>
-<script src="./teacher-easy.js?v=1"></script>
+<script src="./teacher-easy.js?v=2"></script>
 <div id="buildStamp" class="buildStamp" aria-hidden="true">漢字たんけん COMPLETE</div>
 <div class="dataCredit">字形参照: Kanji Canvas reference patterns</div>
 </body>
