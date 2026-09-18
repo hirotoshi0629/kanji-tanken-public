@@ -1324,7 +1324,7 @@ function initTeacherPracticeUI(){
     const banner=document.createElement("div");
     banner.id="teacherPracticeBanner";
     banner.style.cssText="position:sticky;top:0;z-index:10000;background:#fff4cc;border-bottom:2px solid #d6a900;padding:12px 16px;text-align:center;font-weight:800";
-    banner.innerHTML="👩‍🏫 先生のおためしモード：児童コードは使いません。学習履歴・最終利用・正誤・苦手分析・PT・どうぶつの進行は児童データに一切保存されません。 <a href='./teacher.html' style='display:inline-block;margin-left:8px;padding:7px 10px;background:#fff;border:1px solid #b78b00;border-radius:9px;color:#222;text-decoration:none'>← 教師管理画面に戻る</a>";
+    banner.innerHTML="👩‍🏫 先生のおためしモード：児童コードは使いません。学習履歴・最終利用・正誤・苦手分析・PT・どうぶつの進行は児童データに一切保存されません。 <a href='./index.html' style='display:inline-block;margin-left:8px;padding:7px 10px;background:#fff;border:1px solid #b78b00;border-radius:9px;color:#222;text-decoration:none'>← 通常画面に戻る</a>";
     document.body.prepend(banner);
   }
   renderStudentProfile();
