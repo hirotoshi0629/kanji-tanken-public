@@ -1,9 +1,9 @@
-const CACHE="kanjiquest-local-only-v2";
+const CACHE="kanjiquest-local-only-v3";
 const APP_SHELL=[
   "./index.html",
   "./styles.css?v=4.6",
   "./app.js?v=complete-release",
-  "./teacher-easy.js?v=1",
+  "./teacher-easy.js?v=2",
   "./manifest.webmanifest"
 ];
 const CDN_ASSETS=[
