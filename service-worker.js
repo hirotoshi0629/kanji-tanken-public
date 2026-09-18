@@ -1,35 +1,70 @@
-const CACHE="kanjiquest-local-only-v1";
-const ASSETS=[
-  "./",
+const CACHE="kanjiquest-local-only-v2";
+const APP_SHELL=[
   "./index.html",
   "./styles.css?v=4.6",
   "./app.js?v=complete-release",
   "./teacher-easy.js?v=1",
   "./manifest.webmanifest"
 ];
+const CDN_ASSETS=[
+  "https://cdn.jsdelivr.net/gh/asdfjkl/kanjicanvas@master/docs/resources/javascript/kanji-canvas.min.js",
+  "https://cdn.jsdelivr.net/gh/asdfjkl/kanjicanvas@master/docs/resources/javascript/ref-patterns.js"
+];
 
-self.addEventListener("install",e=>{
+self.addEventListener("install",event=>{
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
+  event.waitUntil((async()=>{
+    const cache=await caches.open(CACHE);
+    await cache.addAll(APP_SHELL);
+    await Promise.allSettled(CDN_ASSETS.map(url=>cache.add(url)));
+  })());
 });
 
-self.addEventListener("activate",e=>e.waitUntil((async()=>{
-  for(const k of await caches.keys()) if(k!==CACHE) await caches.delete(k);
-  await self.clients.claim();
-})()));
-
-self.addEventListener("fetch",e=>{
-  if(e.request.method!=="GET")return;
-  e.respondWith((async()=>{
-    try{
-      const res=await fetch(e.request,{cache:"no-store"});
-      if(res && res.ok){
-        const copy=res.clone();
-        caches.open(CACHE).then(c=>c.put(e.request,copy));
-      }
-      return res;
-    }catch(err){
-      return (await caches.match(e.request))||(await caches.match("./index.html"));
-    }
+self.addEventListener("activate",event=>{
+  event.waitUntil((async()=>{
+    for(const key of await caches.keys()) if(key!==CACHE) await caches.delete(key);
+    await self.clients.claim();
   })());
+});
+
+self.addEventListener("fetch",event=>{
+  if(event.request.method!=="GET") return;
+  const url=new URL(event.request.url);
+  const sameOrigin=url.origin===self.location.origin;
+  const isStatic=sameOrigin && (
+    url.pathname.endsWith("/app.js") ||
+    url.pathname.endsWith("/styles.css") ||
+    url.pathname.endsWith("/teacher-easy.js") ||
+    url.pathname.endsWith("/manifest.webmanifest")
+  );
+  const isCdn=CDN_ASSETS.includes(url.href);
+
+  if(isStatic || isCdn){
+    event.respondWith((async()=>{
+      const cached=await caches.match(event.request);
+      if(cached) return cached;
+      const response=await fetch(event.request);
+      if(response && (response.ok || response.type==="opaque")){
+        const cache=await caches.open(CACHE);
+        cache.put(event.request,response.clone()).catch(()=>{});
+      }
+      return response;
+    })());
+    return;
+  }
+
+  if(event.request.mode==="navigate"){
+    event.respondWith((async()=>{
+      try{
+        const response=await fetch(event.request);
+        if(response && response.ok){
+          const cache=await caches.open(CACHE);
+          cache.put("./index.html",response.clone()).catch(()=>{});
+        }
+        return response;
+      }catch(_){
+        return (await caches.match("./index.html")) || Response.error();
+      }
+    })());
+  }
 });
