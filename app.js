@@ -1353,190 +1353,22 @@ window.addEventListener("DOMContentLoaded",()=>{
 /* v5.1 acceptance: wrong kanji always gets visible red-circle feedback; built-in refPatterns provide stroke counts/shape for all supported kanji; correct kana such as る accepted independently. */
 
 
-const SCHOOL_CLOUD={url:"https://arbcsdlypbtwiyrupaod.supabase.co",key:"sb_publishable_6HXWKALvbxqd5HnxWv4VhQ_C3IOu-_T"};
-function cloudHeaders(extra={}){return {apikey:SCHOOL_CLOUD.key,"Content-Type":"application/json",...extra}}
-async function cloudAnon(){
-  let token=localStorage.getItem("kq.cloudToken");
-  if(token)return token;
-  const r=await fetch(SCHOOL_CLOUD.url+"/auth/v1/signup",{method:"POST",headers:cloudHeaders(),body:JSON.stringify({})});
-  if(!r.ok)throw new Error("匿名接続に失敗");
-  const j=await r.json();token=j.access_token||j.session?.access_token;
-  if(!token)throw new Error("認証情報がありません");
-  localStorage.setItem("kq.cloudToken",token);return token;
-}
-async function cloudFetch(path,options={}){
-  const token=await cloudAnon();
-  const r=await fetch(SCHOOL_CLOUD.url+"/rest/v1/"+path,{...options,headers:cloudHeaders({Authorization:"Bearer "+token,...(options.headers||{})})});
-  if(!r.ok)throw new Error(await r.text());return r;
-}
-function schoolProfile(){
-  return {class_code:localStorage.getItem("kq.classCode")||"",student_no:localStorage.getItem("kq.studentNo")||""};
-}
-function saveSchoolProfile(c,n){localStorage.setItem("kq.classCode",c.trim());localStorage.setItem("kq.studentNo",n.trim())}
-async function syncStudentProfile(){
-  const p=schoolProfile();if(!p.class_code||!p.student_no)return;
-  await cloudFetch("student_profiles",{method:"POST",headers:{Prefer:"resolution=merge-duplicates"},body:JSON.stringify(p)});
-}
-async function sendLearningSummary(){
-  const p=schoolProfile();if(!p.class_code||!p.student_no)return;
-  try{
-    await syncStudentProfile();
-    await cloudFetch("learning_events",{method:"POST",body:JSON.stringify({
-      class_code:p.class_code,student_no:p.student_no,
-      sessions:Number(state.sessions||0),points:Number(state.points||0),
-      weak:state.weak||{},weak_detail:state.weakDetail||{}
-    })});
-  }catch(e){console.warn("クラウド保存失敗",e)}
-}
-function installSchoolSetup(){
- const t=setInterval(()=>{const home=document.querySelector("#homeView");if(!home)return;
- if(!document.querySelector("#schoolSetup")){
-  const p=schoolProfile(),d=document.createElement("div");d.id="schoolSetup";d.className="schoolSetup";
-  d.innerHTML=`<b>学校用</b><label>クラス<input id="classCode" maxlength="20" value="${p.class_code}" placeholder="例 3-1"></label><label>出席番号<input id="studentNo" inputmode="numeric" maxlength="4" value="${p.student_no}" placeholder="例 12"></label><button id="schoolSave" type="button">登録</button><span id="schoolStatus"></span>`;
-  home.prepend(d);
-  document.querySelector("#schoolSave").onclick=async()=>{saveSchoolProfile(document.querySelector("#classCode").value,document.querySelector("#studentNo").value);const s=document.querySelector("#schoolStatus");s.textContent="保存中…";try{await syncStudentProfile();s.textContent="登録済み"}catch(e){s.textContent="接続を確認"}};
- }clearInterval(t)},200)
-}
-installSchoolSetup();
-
-
-
-// v8.0 — teacher authentication + class aggregation.
-// Teacher access is granted only when auth.uid() exists in public.teacher_accounts.
-async function teacherLogin(email,password){
-  const r=await fetch(SCHOOL_CLOUD.url+"/auth/v1/token?grant_type=password",{
-    method:"POST",headers:cloudHeaders(),body:JSON.stringify({email,password})
-  });
-  if(!r.ok)throw new Error("メールアドレスまたはパスワードを確認してください");
-  const j=await r.json();localStorage.setItem("kq.teacherToken",j.access_token);return j.access_token;
-}
-async function teacherRpc(token,fn,body={}){
-  const r=await fetch(SCHOOL_CLOUD.url+"/rest/v1/rpc/"+fn,{
-    method:"POST",headers:cloudHeaders({Authorization:"Bearer "+token}),
-    body:JSON.stringify(body)
-  });
-  if(!r.ok)throw new Error(await r.text());return await r.json();
-}
+// PUBLIC LOCAL-ONLY RELEASE — legacy school/cloud functions intentionally disabled.
+function schoolProfile(){return {class_code:"",student_no:""}}
+function saveSchoolProfile(){}
+async function syncStudentProfile(){return}
+async function sendLearningSummary(){return}
+function installSchoolSetup(){}
+function schoolProfileComplete(){return false}
+function refreshSchoolSetupVisibility(){}
 function closeTeacher(){document.querySelector("#teacherModal")?.remove()}
-async function renderTeacherDashboard(token){
-  const data=await teacherRpc(token,"teacher_dashboard",{});
-  const rows=Array.isArray(data)?data:[];
-  const classes=[...new Set(rows.map(x=>x.class_code))].sort();
-  const modal=document.querySelector("#teacherModal");
-  const body=modal.querySelector(".teacherBody");
-  body.innerHTML=`
-    <div class="teacherToolbar"><label>クラス<select id="teacherClass"><option value="">すべて</option>${classes.map(c=>`<option>${c}</option>`).join("")}</select></label>
-    <button id="teacherLogout" type="button">ログアウト</button></div>
-    <div id="teacherSummary"></div><div id="teacherRows"></div>`;
-  const draw=()=>{
-    const c=document.querySelector("#teacherClass").value;
-    const r=c?rows.filter(x=>x.class_code===c):rows;
-    const students=r.length;
-    const sessions=r.reduce((s,x)=>s+Number(x.sessions||0),0);
-    const points=r.reduce((s,x)=>s+Number(x.points||0),0);
-    const weakCount={};
-    r.forEach(x=>Object.entries(x.weak||{}).forEach(([k,v])=>weakCount[k]=(weakCount[k]||0)+Number(v||0)));
-    const top=Object.entries(weakCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    document.querySelector("#teacherSummary").innerHTML=`<div class="teacherCards">
-      <div><b>${students}</b><span>児童</span></div><div><b>${sessions}</b><span>学習回数</span></div>
-      <div><b>${points}</b><span>合計ポイント</span></div><div><b>${top[0]?.[0]||"—"}</b><span>最も苦手</span></div></div>
-      <div class="classWeak"><b>クラスの苦手漢字</b> ${top.length?top.map(([k,v])=>`<span>${k} ${v}</span>`).join(""):"まだ記録なし"}</div>`;
-    document.querySelector("#teacherRows").innerHTML=`<div class="teacherTableWrap"><table><thead><tr><th>クラス</th><th>番号</th><th>学習回数</th><th>ポイント</th><th>苦手漢字</th><th>最終学習</th></tr></thead><tbody>${
-      r.map(x=>`<tr><td>${x.class_code}</td><td>${x.student_no}</td><td>${x.sessions||0}</td><td>${x.points||0}</td>
-      <td class="weakCell">${Object.entries(x.weak||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`${k}(${v})`).join(" ")||"—"}</td>
-      <td>${x.last_study?new Date(x.last_study).toLocaleString("ja-JP"):"—"}</td></tr>`).join("")
-    }</tbody></table></div>`;
-  };
-  document.querySelector("#teacherClass").onchange=draw;
-  document.querySelector("#teacherLogout").onclick=()=>{localStorage.removeItem("kq.teacherToken");closeTeacher()};
-  draw();
-}
-function openTeacher(){
-  closeTeacher();const m=document.createElement("div");m.id="teacherModal";m.className="teacherModal";
-  m.innerHTML=`<section class="teacherPanel"><div class="teacherHead"><div><small>先生専用</small><h2>クラス学習状況</h2></div><button id="teacherX" type="button">閉じる</button></div>
-  <div class="teacherBody"><p>先生のメールアドレスとパスワードでログインしてください。</p>
-  <label>メールアドレス<input id="teacherEmail" type="email" autocomplete="username"></label>
-  <label>パスワード<input id="teacherPassword" type="password" autocomplete="current-password"></label>
-  <button id="teacherLogin" type="button">ログイン</button><div id="teacherMsg"></div></div></section>`;
-  document.body.appendChild(m);document.querySelector("#teacherX").onclick=closeTeacher;
-  const saved=localStorage.getItem("kq.teacherToken");if(saved){renderTeacherDashboard(saved).catch(()=>localStorage.removeItem("kq.teacherToken"))}
-  document.querySelector("#teacherLogin").onclick=async()=>{const msg=document.querySelector("#teacherMsg");msg.textContent="確認中…";try{
-    const token=await teacherLogin(document.querySelector("#teacherEmail").value,document.querySelector("#teacherPassword").value);
-    await renderTeacherDashboard(token);
-  }catch(e){msg.textContent="ログインできませんでした。先生アカウントを確認してください。"}};
-}
-(function installTeacherEntry(){const t=setInterval(()=>{const home=document.querySelector("#homeView");if(!home)return;
- if(!document.querySelector("#teacherEntry")){const b=document.createElement("button");b.id="teacherEntry";b.className="teacherEntry";b.type="button";b.textContent="先生用";b.onclick=openTeacher;home.appendChild(b)}
- clearInterval(t)},250)})();
+function openTeacher(){}
+async function teacherLogin(){throw new Error("公開版では先生用クラウド機能を使用しません")}
+async function teacherRpc(){return []}
+async function renderTeacherDashboard(){return}
+async function cloudAnon(){throw new Error("公開版は端末内モードです")}
+async function cloudFetch(){throw new Error("公開版は端末内モードです")}
+async function cloudAnonFresh(){throw new Error("公開版は端末内モードです")}
+async function schoolCloudHealth(){return}
 
-
-
-// v8.0 FINAL — school-use polish
-function schoolProfileComplete(){
-  const p=schoolProfile();
-  return !!(p.class_code && p.student_no);
-}
-function refreshSchoolSetupVisibility(){
-  const box=document.querySelector("#schoolSetup");
-  if(!box)return;
-  box.classList.toggle("schoolSetupDone",schoolProfileComplete());
-}
-document.addEventListener("click",e=>{
-  if(e.target?.id==="schoolSave"){
-    setTimeout(refreshSchoolSetupVisibility,300);
-  }
-});
-(function installSchoolEditButton(){
-  const t=setInterval(()=>{
-    const home=document.querySelector("#homeView");
-    const setup=document.querySelector("#schoolSetup");
-    if(!home||!setup)return;
-    if(!document.querySelector("#schoolEditBtn")){
-      const b=document.createElement("button");
-      b.id="schoolEditBtn";b.type="button";b.className="schoolEditBtn";
-      b.textContent="クラス・出席番号を変更";
-      b.onclick=()=>setup.classList.remove("schoolSetupDone");
-      setup.insertAdjacentElement("afterend",b);
-    }
-    refreshSchoolSetupVisibility();
-    clearInterval(t);
-  },250);
-})();
-
-
-
-// COMPLETE RELEASE — cloud recovery and school-operation status.
-async function cloudAnonFresh(){
-  localStorage.removeItem("kq.cloudToken");
-  return await cloudAnon();
-}
-async function schoolCloudHealth(){
-  const p=schoolProfile();
-  const el=document.querySelector("#schoolCloudState");
-  if(!el)return;
-  if(!p.class_code||!p.student_no){el.textContent="未登録";return}
-  el.textContent="接続確認中…";
-  try{
-    await syncStudentProfile();
-    el.textContent="クラウド接続済み";
-  }catch(e){
-    try{
-      await cloudAnonFresh();
-      await syncStudentProfile();
-      el.textContent="クラウド接続済み";
-    }catch(e2){el.textContent="オフライン（端末内で学習できます）"}
-  }
-}
-(function installFinalCloudState(){
- const t=setInterval(()=>{
-   const home=document.querySelector("#homeView");if(!home)return;
-   if(!document.querySelector("#schoolCloudState")){
-     const s=document.createElement("div");s.id="schoolCloudState";s.className="schoolCloudState";
-     const edit=document.querySelector("#schoolEditBtn");
-     if(edit)edit.insertAdjacentElement("afterend",s); else home.prepend(s);
-   }
-   schoolCloudHealth();clearInterval(t);
- },500);
-})();
-window.addEventListener("online",schoolCloudHealth);
 
