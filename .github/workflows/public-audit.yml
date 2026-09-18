@@ -19,6 +19,7 @@ jobs:
           test -s service-worker.js
       - name: Verify local-only safety layer
         run: |
+          ! grep -q "arbcsdlypbtwiyrupaod.supabase.co" app.js
           grep -q "arbcsdlypbtwiyrupaod.supabase.co" teacher-easy.js
           grep -q "blockedLocalPaths" teacher-easy.js
           grep -q "studentIdentityCard" teacher-easy.js
@@ -26,13 +27,16 @@ jobs:
           ! grep -q "MutationObserver" teacher-easy.js
       - name: Verify public page wiring
         run: |
-          grep -q 'app.js?v=complete-release' index.html
+          grep -q 'app.js?v=local-only-1' index.html
           grep -q 'teacher-easy.js?v=2' index.html
           grep -q 'manifest.webmanifest' index.html
+          ! grep -q 'arbcsdlypbtwiyrupaod.supabase.co' app.js
+          ! grep -q 'installTeacherEntry' app.js
+          ! grep -q 'installFinalCloudState' app.js
           ! grep -q 'id="studentSetupBtn"' index.html
           ! grep -q '児童コード：未登録' index.html
           ! grep -q 'TEACHER SANDBOX' index.html
-          grep -q 'kanjiquest-local-only-v3' service-worker.js
+          grep -q 'kanjiquest-local-only-v4' service-worker.js
           grep -q 'teacher-easy.js?v=2' service-worker.js
       - name: Audit network-capable code
         run: |
