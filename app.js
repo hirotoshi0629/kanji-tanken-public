@@ -17,12 +17,8 @@ const onIf=(selector,event,handler)=>{const el=$(selector);if(el)el.addEventList
 
 const studentProfile=()=>{if(TEACHER_PRACTICE)return null;try{return JSON.parse(localStorage.getItem("kq.studentProfile")||"null")}catch{return null}};
 function validStudentCode(s){return /^[1-6]-[1-9][0-9]?-[0-9]{1,3}$/.test(String(s||"").trim())}
-async function syncLearningEvent(type,payload={}){
- if(TEACHER_PRACTICE)return;
- const p=studentProfile();if(!p||!validStudentCode(p.code)||!currentSchoolCode())return;
- try{await fetch("/api/activity",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type,teacherPractice:TEACHER_PRACTICE,schoolCode:p.schoolCode||currentSchoolCode(),studentCode:p.code,grade:+p.grade,classNo:+p.classNo,seatNo:+p.seatNo,...payload})})}
- catch(e){console.warn("学習記録を送信できませんでした",e)}
-}
+// 学習成果はこの端末内だけに保存する。旧クラウドAPIへは送信しない。
+function syncLearningEvent(){ return Promise.resolve(); }
 function openStudentSetup(){
   if(TEACHER_PRACTICE)return;
   if(!currentSchoolCode()){alert("学校用URLから開いてください。学校コードが設定されていません。");return;}
