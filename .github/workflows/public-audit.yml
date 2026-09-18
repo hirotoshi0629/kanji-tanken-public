@@ -24,11 +24,16 @@ jobs:
           grep -q "studentIdentityCard" teacher-easy.js
           grep -q "クラス・出席番号を変更" teacher-easy.js
           ! grep -q "MutationObserver" teacher-easy.js
-      - name: Verify page wiring
+      - name: Verify public page wiring
         run: |
           grep -q 'app.js?v=complete-release' index.html
-          grep -q 'teacher-easy.js?v=1' index.html
+          grep -q 'teacher-easy.js?v=2' index.html
           grep -q 'manifest.webmanifest' index.html
+          ! grep -q 'id="studentSetupBtn"' index.html
+          ! grep -q '児童コード：未登録' index.html
+          ! grep -q 'TEACHER SANDBOX' index.html
+          grep -q 'kanjiquest-local-only-v3' service-worker.js
+          grep -q 'teacher-easy.js?v=2' service-worker.js
       - name: Audit network-capable code
         run: |
           echo '--- fetch calls ---'
