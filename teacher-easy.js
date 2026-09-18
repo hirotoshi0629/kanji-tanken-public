@@ -14,7 +14,7 @@
     return originalFetch(input,init);
   };
 
-  ['kq.cloudToken','kq.cloudSessionV2','kq.cloudSnapshotV2','kq.teacherToken','kq.schoolTeacherCode','kq.classCode','kq.studentNo','kq.studentProfile'].forEach(key=>localStorage.removeItem(key));
+  ['kq.cloudToken','kq.cloudSessionV2','kq.cloudSnapshotV2','kq.teacherToken','kq.schoolTeacherCode','kq.classCode','kq.studentNo'].forEach(key=>localStorage.removeItem(key));
 
   const style=document.createElement('style');
   style.id='localOnlyPublicStyle';
